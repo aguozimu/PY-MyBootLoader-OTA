@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OTA Console · OTA-PROTO-1.0</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="app-header">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13L16 3Z" stroke="currentColor" stroke-width="1.8"/><path d="m10.5 16 4 4 7.5-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>OTA Console</h1>
+        <p>STM32 OTA 上位机 · OTA-PROTO-1.0</p>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="connection-pill" id="connectionPill">
+      <span class="status-dot" id="connectionDot"></span>
+      <span id="connectionText">未连接</span>
+    </div>
+    <div class="connection-controls">
+      <label class="sr-only" for="portSelect">串口</label>
+      <select id="portSelect" class="control-select" title="串口">
+        <option value="">扫描中…</option>
+      </select>
+      <button class="btn btn-icon" id="refreshPortsBtn" title="刷新串口列表" aria-label="刷新串口列表">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="baud-chip">115200 · 8N1</span>
+      <button class="btn btn-primary" id="connectBtn">连接串口</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="overview-grid">
+      <article class="panel device-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">DEVICE</span>
+            <h2>设备状态</h2>
+          </div>
+          <span class="micro-badge" id="deviceQueryBadge">未查询</span>
+        </div>
+        <div class="metric-grid">
+          <div class="metric">
+            <span>运行状态</span>
+            <strong id="runStatus">—</strong>
+            <small id="runStatusRaw">UNKNOWN</small>
+          </div>
+          <div class="metric">
+            <span>程序 ID</span>
+            <strong class="mono" id="programId">—</strong>
+            <small>16-bit sequence</small>
+          </div>
+          <div class="metric">
+            <span>当前页 / 块</span>
+            <strong class="mono" id="currentPageBlock">— / —</strong>
+            <small>Page / Block</small>
+          </div>
+          <div class="metric">
+            <span>错误码</span>
+            <strong class="mono" id="errorCode">0x00</strong>
+            <small id="errorDesc">无错误</small>
+          </div>
+        </div>
+        <div class="query-row">
+          <button class="btn" id="queryCrcBtn"><span>查询 CRC</span><kbd>G</kbd></button>
+          <button class="btn" id="queryMidBtn"><span>查询 ID</span><kbd>M</kbd></button>
+          <button class="btn" id="queryStatusBtn"><span>查询状态</span><kbd>S</kbd></button>
+        </div>
+        <p class="panel-footnote" id="lastQuery">尚未进行设备查询</p>
+      </article>
+
+      <article class="panel firmware-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">FIRMWARE</span>
+            <h2>固件与升级</h2>
+          </div>
+          <span class="micro-badge" id="firmwareBadge">15 KB 程序区</span>
+        </div>
+        <input type="file" id="firmwareInput" accept=".bin,application/octet-stream" hidden>
+        <button class="drop-zone" id="dropZone" type="button">
+          <span class="drop-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="drop-title" id="fileName">拖放或选择固件 .bin</span>
+          <span class="drop-sub" id="fileMeta">不足 15 KB 时可自动以 0xFF 补齐</span>
+        </button>
+        <div class="firmware-info">
+          <div><span>整体 CRC</span><strong class="mono" id="overallCrc">—</strong></div>
+          <div><span>补齐</span><strong class="mono" id="paddedBytes">0 B</strong></div>
+          <button class="btn btn-ghost" id="chooseFileBtn">选择文件</button>
+        </div>
+        <div class="upgrade-form">
+          <label for="programIdInput">目标程序 ID</label>
+          <div class="input-with-prefix">
+            <span>0x</span>
+            <input id="programIdInput" class="mono" maxlength="4" placeholder="0103" autocomplete="off" spellcheck="false">
+          </div>
+          <label class="check-row">
+            <input type="checkbox" id="padCheckbox" checked>
+            <span>不足 15 KB 自动补齐</span>
+          </label>
+        </div>
+        <button class="btn btn-upgrade" id="startUpgradeBtn" disabled>
+          <span class="upgrade-pulse"></span>
+          <span>开始 OTA 升级</span>
+        </button>
+        <p class="panel-footnote" id="firmwareHint">选择固件后将计算 15 个程序页 CRC</p>
+      </article>
+
+      <article class="panel task-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">TRANSACTION</span>
+            <h2>事务与结果</h2>
+          </div>
+          <span class="micro-badge" id="taskBadge">待机</span>
+        </div>
+        <div class="task-phase">
+          <span class="task-phase-dot" id="taskPhaseDot"></span>
+          <strong id="taskPhase">待机</strong>
+          <span id="taskMessage">等待操作</span>
+        </div>
+        <div class="progress-head">
+          <span>总进度</span>
+          <strong class="mono" id="progressText">0.0%</strong>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+        <div class="task-stats">
+          <div><span>已确认帧</span><strong class="mono" id="confirmedFrames">0 / 0</strong></div>
+          <div><span>当前重试</span><strong class="mono" id="retryCount">0 / 5</strong></div>
+          <div><span>运行时间</span><strong class="mono" id="taskTime">00:00</strong></div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-danger" id="stopBtn" disabled>中止任务</button>
+          <button class="btn btn-ghost" id="downloadLogsBtn2">导出日志</button>
+        </div>
+        <p class="panel-footnote">每帧等待匹配 AckCRC；超时 500 ms，最多重发 5 次。</p>
+      </article>
+    </section>
+
+    <section class="panel pages-panel">
+      <div class="panel-heading table-heading">
+        <div>
+          <span class="eyebrow">PAGE MAP</span>
+          <h2>页级明细</h2>
+        </div>
+        <div class="table-legend">
+          <span><i class="legend-dot skip"></i>CRC 相同</span>
+          <span><i class="legend-dot write"></i>需要写入</span>
+          <span><i class="legend-dot active"></i>传输中</span>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>页</th><th>相对地址</th><th>本地 CRC</th><th>设备 CRC</th><th>决策</th><th>传输状态</th></tr>
+          </thead>
+          <tbody id="pageRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel log-panel">
+      <div class="log-heading">
+        <div>
+          <span class="eyebrow">LIVE TRACE</span>
+          <h2>实时收发日志</h2>
+        </div>
+        <div class="log-tools">
+          <div class="segmented" id="logFilters">
+            <button class="active" data-filter="all">全部</button>
+            <button data-filter="tx">TX</button>
+            <button data-filter="rx">RX</button>
+            <button data-filter="business">业务</button>
+          </div>
+          <label class="check-row compact"><input type="checkbox" id="autoScrollCheckbox" checked><span>自动滚动</span></label>
+          <button class="btn btn-ghost small" id="clearLogsBtn">清空</button>
+          <button class="btn btn-ghost small" id="downloadLogsBtn">下载</button>
+        </div>
+      </div>
+      <div class="log-list" id="logList" role="log" aria-live="polite"></div>
+      <div class="log-footer"><span id="logCount">0 条</span><span>日志同时写入 logs/runtime/ota-YYYY-MM-DD.log</span></div>
+    </section>
+  </main>
+
+  <dialog class="confirm-dialog" id="upgradeDialog">
+    <form method="dialog">
+      <div class="dialog-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3 2.8 19h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9v4.5M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h2>确认开始 OTA 升级？</h2>
+      <p>上位机将先查询设备运行区 CRC，并只写入 CRC 不一致的程序页。升级过程中请勿断开串口或设备电源。</p>
+      <dl class="dialog-summary">
+        <div><dt>固件</dt><dd id="dialogFileName">—</dd></div>
+        <div><dt>目标 ID</dt><dd class="mono" id="dialogProgramId">—</dd></div>
+        <div><dt>固件大小</dt><dd class="mono" id="dialogFirmwareSize">—</dd></div>
+      </dl>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" value="cancel">取消</button>
+        <button class="btn btn-primary" id="confirmUpgradeBtn" value="confirm">确认升级</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast-stack" id="toastStack" aria-live="assertive"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

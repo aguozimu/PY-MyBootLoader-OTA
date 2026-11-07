@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OTA Console · 界面线框图</title>
+<style>
+:root{--bg:#0b1118;--panel:#111b25;--line:#223140;--text:#e6edf3;--muted:#8fa3b5;--ok:#2dd4a8;--warn:#f2b84b;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif}.page{max-width:1440px;margin:auto;padding:18px}.top{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid var(--line);background:var(--panel);border-radius:10px}.brand{font-size:20px;font-weight:700;letter-spacing:.5px}.sub{color:var(--muted);font-size:12px}.grow{flex:1}.pill{border:1px solid var(--line);padding:7px 10px;border-radius:999px;color:var(--muted)}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px}.green{background:var(--ok)}.btn{border:1px solid var(--line);background:#172431;color:var(--text);padding:8px 14px;border-radius:7px}.primary{border-color:#16846c;background:#123d34;color:#8df2d5}.grid{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:14px;margin-top:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}.card h2{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.08em;margin:0 0 14px;text-transform:uppercase}.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kpi{border:1px solid var(--line);border-radius:8px;padding:10px;background:#0e1821}.kpi small{display:block;color:var(--muted);font-size:11px}.kpi strong{display:block;margin-top:3px;font-size:16px}.drop{border:1px dashed #3b5368;border-radius:8px;padding:20px;text-align:center;color:var(--muted);background:#0e1821}.field{display:flex;gap:8px;margin-top:10px}.field input{flex:1;border:1px solid var(--line);background:#0b131b;color:var(--text);padding:8px 10px;border-radius:7px}.actions{display:flex;gap:8px;margin-top:12px}.progress{height:8px;background:#0a1219;border-radius:99px;overflow:hidden;margin:12px 0}.progress span{display:block;width:42%;height:100%;background:var(--ok)}.steps{display:grid;gap:7px;font-size:12px;color:var(--muted)}.steps b{color:var(--text);font-weight:500}.table-wrap{margin-top:14px;overflow:auto}.table-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}.table-head h2{margin:0}.table-head span{margin-left:auto;color:var(--muted);font-size:12px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}.mono{font-family:Consolas,monospace}.tag{font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted)}.tag.write{color:var(--warn);border-color:#5b4822;background:#2a2211}.log{margin-top:14px;background:#080d12;border:1px solid var(--line);border-radius:10px;padding:12px}.logbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}.logbar .btn{padding:5px 9px;font-size:12px}.logline{font:12px/1.8 Consolas,monospace;color:#a9b8c6;border-bottom:1px solid #101b25;padding:3px 5px}.tx{color:#7dd3fc}.rx{color:#86efac}.note{color:var(--muted);font-size:12px;margin-top:6px}.badge-ok{color:var(--ok)}@media(max-width:1050px){.grid{grid-template-columns:1fr}.top{flex-wrap:wrap}.page{padding:10px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div><div class="brand">OTA Console</div><div class="sub">OTA-PROTO-1.0 · 界面线框图</div></div>
+    <div class="grow"></div>
+    <div class="pill"><span class="dot green"></span>已连接 COM5</div>
+    <div class="pill">115200 · 8N1</div>
+    <button class="btn">刷新</button><button class="btn primary">连接串口</button>
+  </div>
+  <div class="grid">
+    <section class="card">
+      <h2>设备状态</h2>
+      <div class="kpis">
+        <div class="kpi"><small>运行状态</small><strong class="badge-ok">VALID_BACKUP</strong></div>
+        <div class="kpi"><small>程序 ID</small><strong class="mono">0x0102</strong></div>
+        <div class="kpi"><small>当前页 / 块</small><strong class="mono">07 / 0xA4</strong></div>
+        <div class="kpi"><small>错误码</small><strong class="mono">0x00</strong></div>
+      </div>
+      <div class="note">查询操作：CRC 页表 · 程序 ID · 传输状态</div>
+      <div class="actions"><button class="btn">查询 CRC</button><button class="btn">查询 ID</button><button class="btn">查询状态</button></div>
+    </section>
+    <section class="card">
+      <h2>固件与升级</h2>
+      <div class="drop">拖放 .bin 文件到这里<br><small>15 KB 程序区 · 不足自动以 0xFF 补齐</small></div>
+      <div class="field"><input value="示例文件名.bin" readonly><button class="btn">选择</button></div>
+      <div class="field"><input placeholder="目标程序 ID，例如 0x0103"><button class="btn primary">开始升级</button></div>
+      <div class="note">文件 CRC / 页数 / 补齐字节将在选择后即时显示。</div>
+    </section>
+    <section class="card">
+      <h2>事务与结果</h2>
+      <div class="steps">
+        <div><b>阶段：</b>发送程序页</div>
+        <div><b>进度：</b>42% · 已确认 1,344 / 3,328 帧</div>
+        <div><b>当前：</b>Page 03 · Block 0x80</div>
+      </div>
+      <div class="progress"><span></span></div>
+      <div class="actions"><button class="btn">中止</button><button class="btn">下载日志</button></div>
+      <div class="note">只有收到匹配 AckCRC 才推进；超时 500 ms，最多重发 5 次。</div>
+    </section>
+  </div>
+  <section class="card table-wrap">
+    <div class="table-head"><h2>页级明细</h2><span>设备 CRC 来自 GetCRC 运行区查询</span></div>
+    <table>
+      <thead><tr><th>页</th><th>相对地址</th><th>本地 CRC</th><th>设备 CRC</th><th>决策</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>Page 00</td><td class="mono">0x0000</td><td class="mono">A1B2C3D4</td><td class="mono">A1B2C3D4</td><td><span class="tag">跳过</span></td><td>已跳过</td></tr>
+        <tr><td>Page 01</td><td class="mono">0x0400</td><td class="mono">E5F60718</td><td class="mono">00000000</td><td><span class="tag write">写入</span></td><td>已确认</td></tr>
+        <tr><td>Page 02</td><td class="mono">0x0800</td><td class="mono">19A2B3C4</td><td class="mono">00000000</td><td><span class="tag write">写入</span></td><td>传输中</td></tr>
+        <tr><td>Page 03</td><td class="mono">0x0C00</td><td class="mono">7F00AA11</td><td class="mono">00000000</td><td><span class="tag write">写入</span></td><td>等待</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="log">
+    <div class="logbar"><strong>实时收发日志</strong><button class="btn">全部</button><button class="btn">TX</button><button class="btn">RX</button><button class="btn">业务</button><span class="grow"></span><button class="btn">清空</button><button class="btn">下载</button></div>
+    <div class="logline tx">16:42:08.120 TX SetDat #0x80 DE AD BE EF · CRC 7DD0ED91</div>
+    <div class="logline rx">16:42:08.141 RX AckCRC #0x80 91 ED D0 7D · 匹配</div>
+    <div class="logline">16:42:08.142 业务 Page 03 已确认 129 / 256 块</div>
+  </section>
+</div>
+</body>
+</html>
