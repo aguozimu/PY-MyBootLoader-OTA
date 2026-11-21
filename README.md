@@ -1,33 +1,51 @@
+<div align="center">
+
 # OTA Console
 
-基于 Python + 原生 HTML 的 STM32 OTA 上位机，实现 `OTA-PROTO-1.0` 串口通讯协议。
+**把 STM32 OTA 升级从“发完等结果”变成一条可观察、可校验、可追溯的链路。**
 
-![Python 桌面控制台](docs/desktop-console-preview.png)
+<img src="assets/banner.webp" alt="OTA Console — STM32 OTA 上位机" width="100%">
 
-## 功能
+[![Python](https://img.shields.io/badge/Python-3.10%2B-2f6f62?style=flat-square)](https://www.python.org/)
+[![Protocol](https://img.shields.io/badge/Protocol-OTA--PROTO--1.0-39d9aa?style=flat-square)](doc/上位机/01-通讯协议完整规范.md)
+[![Platform](https://img.shields.io/badge/Platform-Windows-50616a?style=flat-square)](start.bat)
 
-- 串口扫描与连接：115200、8 数据位、无校验、1 停止位。
-- 固定 16 字节协议帧，STM32F1 硬件 CRC（`0x04C11DB7 / 0xFFFFFFFF / xorout=0`）。
-- 流式收帧：支持 UART 拆包、粘包和 `0xA5` 自动重新同步。
-- `GetCRC`、`GetMID`、`GetSta` 查询事务。
-- 固件 `.bin` 装载、15 个程序页 CRC 计算、不足 15 KB 自动以 `0xFF` 补齐。
-- 运行区 CRC 对比，只写入 CRC 不一致的程序页。
-- 1 KB 控制页生成与 Page16 自身 CRC 计算。
-- 每帧 500 ms 停等确认，最多重发 5 次；Number 与 CRC 同时匹配才推进。
-- 最终 `SetMID`、16 帧 `SetCRC`、`SetSta`、`SetEnd` 握手及目标页 CRC 复核。
-- HTML 实时界面：设备状态、固件校验、总进度、16 行页明细、TX/RX 日志。
-- SSE 实时推送；界面不依赖任何 CDN，离线可用。
-- 运行日志自动写入 `logs/runtime/ota-YYYY-MM-DD.log`。
+</div>
 
-## 快速启动
+---
 
-双击：
+## 这是什么
 
-```text
-start.bat
-```
+OTA Console 是面向 STM32F1 BootLoader 的桌面 OTA 上位机。它把串口链路、固件页校验、差异页写入、逐帧 ACK 和最终 CRC 复核集中在一个界面里，让操作人员随时知道设备当前状态、任务进度和失败原因。
 
-脚本会自动创建 `.venv`、安装运行依赖，启动 Python 桌面控制台，并自动打开 HTML 主界面。也可以手动执行：
+项目采用 **Python 本地服务 + 原生 HTML/CSS/JavaScript + SSE**，不依赖云端，也不依赖 CDN。双击启动后即可在离线工控环境中使用。
+
+## 为什么需要它
+
+OTA 的风险不只在“固件有没有发出去”，更在于发送过程是否真的被设备确认、写入了哪些页、最终运行区是否完整。
+
+OTA Console 遵循 `OTA-PROTO-1.0`：
+
+- 固定 **16 字节协议帧**，使用 STM32F1 硬件 CRC。
+- 收帧支持 UART 拆包、粘包和 `0xA5` 自动重同步。
+- 升级前查询运行区 CRC，只写入 CRC 不一致的程序页。
+- 每一帧都等待匹配的 `AckCRC`，Number 与 CRC 同时一致才推进。
+- 最终完成 `SetMID`、16 帧 `SetCRC`、`SetSta`、`SetEnd` 握手并复核目标页。
+- TX/RX、事务阶段、错误和结果同步显示并写入本地运行日志。
+
+## 你会得到什么
+
+<img src="assets/features.webp" alt="OTA Console 主界面与核心升级能力" width="100%">
+
+一个界面即可完成设备查询、固件装载、页差异比较、OTA 写入、失败定位和日志导出。升级进度只由真实 ACK 推进，不使用模拟动画掩盖链路状态。
+
+## 快速开始
+
+### Windows 一键启动
+
+双击 `start.bat`。脚本会自动创建 `.venv`、安装依赖、启动桌面控制台，并打开 OTA 主界面。
+
+### 手动启动
 
 ```powershell
 python -m venv .venv
@@ -37,26 +55,41 @@ python -m venv .venv
 
 默认地址：<http://127.0.0.1:8765/>
 
-默认启动 Python 桌面控制台；主界面使用系统浏览器承载，关闭控制台会停止后台服务。常用参数：
+常用运行模式：
 
 ```powershell
-.\.venv\Scripts\python.exe -m ota_host --desktop
+# 默认：Python 桌面控制台 + 系统浏览器主界面
+.\.venv\Scripts\python.exe -m ota_host
+
+# 直接使用系统浏览器
 .\.venv\Scripts\python.exe -m ota_host --browser
+
+# 仅启动本地服务，不打开界面
 .\.venv\Scripts\python.exe -m ota_host --no-browser
+
+# 自定义端口
 .\.venv\Scripts\python.exe -m ota_host --port 9000
 ```
 
 ## 使用流程
 
-1. 刷新并选择串口，点击“连接串口”。
-2. 选择 `.bin` 固件，确认大小、整体 CRC 和 15 个页 CRC。
-3. 填写目标程序 ID（`0x0001~0xFFFF`）。
-4. 可先执行“查询 CRC / 查询状态 / 查询 ID”确认链路。
-5. 点击“开始 OTA 升级”，在确认框中确认。
-6. 观察页级明细和实时日志；只有收到匹配 `AckCRC` 的帧才推进进度。
-7. 最终状态为 `VALID_BACKUP` 且目标页 CRC 全部一致，界面才显示升级成功。
+1. 刷新并选择串口，以 `115200 · 8N1` 连接设备。
+2. 选择 `.bin` 固件，检查大小、整体 CRC 和 15 个程序页 CRC。
+3. 填写 `0x0001~0xFFFF` 范围内的目标程序 ID。
+4. 执行查询 CRC / 查询 ID / 查询状态，确认链路与设备状态。
+5. 点击“开始 OTA 升级”，观察页级明细、总进度和实时日志。
+6. 仅当状态为 `VALID_BACKUP` 且目标页 CRC 全部一致时，升级才判定成功。
 
-## 协议实现要点
+## 工作方式
+
+```text
+连接串口
+  → 查询设备运行区 CRC / 程序 ID / 状态
+  → 比较 15 个程序页，生成差异页与控制页
+  → 发送控制页与差异页，逐帧等待 AckCRC
+  → 执行最终握手
+  → 复核目标页 CRC
+```
 
 ### 帧格式
 
@@ -64,50 +97,17 @@ python -m venv .venv
 A5 | Type(6 ASCII) | Number(1) | Data(4) | CRC32(4)
 ```
 
-- 所有多字节整数均使用小端。
+- 多字节整数使用小端。
 - CRC 输入为帧字节 `0..11` 组成的 3 个小端 `uint32_t`。
 - `AckCRC` 本身不回复确认。
-- 业务帧确认要求 `Type=AckCRC`、`Number` 相同、`Data` 等于原帧 CRC 原值。
+- 业务帧确认要求 `Type=AckCRC`、`Number` 相同、`Data` 等于原帧 CRC。
 
 ### 页模型
 
-- Page 0~14：15 个程序页，每页 1 KB，共 15 KB。
-- Control：偏移 `0x3C00`，1 KB 控制页。
-- 控制页前 132 字节为字段，其余全 `0xFF`。
-- Page16.CRC 计算前先把偏移 `128..131` 置 0，再对完整 1 KB 计算硬件 CRC。
-
-### 最终握手
-
-上位机发送 `SetEnd` 后，设备成功回报顺序：
-
-```text
-SetMID
-SetCRC #00 ... SetCRC #0F
-SetSta  (0x05 / FF / FF / 00)
-SetEnd  (0x05 / FF / FF / 00)
-```
-
-上位机逐帧回复 `AckCRC`，并复核 15 个程序页最终 CRC 与本地固件一致。
-
-## 项目结构
-
-```text
-doc/                       原始上位机/设备协议文档
-docs/UI-PLAN.md            HTML 界面规划
-docs/ui-wireframe.html     静态界面线框图
-ota_host/protocol.py       帧、CRC、解析器、控制页
-ota_host/serial_link.py    串口接收线程
-ota_host/engine.py         查询与升级状态机
-ota_host/web_server.py     本地 HTTP/SSE 服务
-ota_host/desktop.py        Python 桌面控制台与服务生命周期
-ota_host/event_bus.py      SSE 事件分发
-web/index.html             页面结构
-web/styles.css             视觉样式
-web/app.js                 页面交互与实时渲染
-tests/                     协议层与状态机测试
-logs/conversations/        对话和决策日志
-logs/runtime/              运行日志与测试日志
-```
+- Page 0~14：15 个程序页，每页 1 KB。
+- Control：偏移 `0x3C00`，独立 1 KB 控制页。
+- 不足 15 KB 的固件自动以 `0xFF` 补齐。
+- Page16 CRC 计算前将偏移 `128..131` 置 0，再计算完整 1 KB。
 
 ## 测试
 
@@ -115,30 +115,23 @@ logs/runtime/              运行日志与测试日志
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-或双击 `run_tests.bat`。
+当前自动化测试覆盖协议帧 CRC、ACK 回显、UART 拆包/粘包、控制页布局、页差异决策、查询事务、重试、部分页升级、全页相同升级和最终 CRC 失败等场景。
 
-测试覆盖：
+## 文档
 
-- 文档中的 10 组完整帧 CRC 示例。
-- ACK 的 Number 与 CRC 回显。
-- UART 拆包、粘包、错误帧重新同步。
-- 控制页布局与 Page16 CRC。
-- 页 CRC 比较与待写页决策；差异页在控制页中的 CRC 初始填 0。
-- 假设备下的 CRC/ID/状态查询。
-- 每次升级强制重新 `GetCRC` 后才允许发送 `SetDat`。
-- 全页相同、仅部分页不同的升级流程。
-
-## 日志规则
-
-- 每个对话轮次记录到 `logs/conversations/YYYY-MM-DD.md`。
-- 遇到问题先检索对话日志和运行日志。
-- 串口 TX/RX、任务阶段、错误和最终结果写入 `logs/runtime/ota-YYYY-MM-DD.log`。
-- 界面日志保存在内存中，最多 2000 条，可下载为文本。
+- [上位机通讯协议完整规范](doc/上位机/01-通讯协议完整规范.md)
+- [设备通讯协议完整规范](doc/设备/01-通讯协议完整规范.md)
+- [UI 设计与实现规划](docs/UI-PLAN.md)
 
 ## 当前边界
 
-- 已通过协议与假设备测试；尚未连接真实 STM32 设备进行 115200 串口联调。
-- 桌面控制台使用 Python.NET/WinForms，主界面仍为原生 HTML/CSS/JavaScript。
-- 设备端必须实现协议规定的 16 字节流式收帧、业务 ACK、选槽、页写和最终握手。
-- 实际烧录前应先执行查询并核对设备返回的运行区 CRC、程序 ID 与目标槽规则。
+- 自动化测试使用假设备覆盖协议与状态机；现场烧录前仍应核对真实设备返回的运行区 CRC、程序 ID 和目标槽规则。
+- 设备端必须实现协议规定的流式收帧、业务 ACK、选槽、页写与最终握手。
+- 本工具只作为 OTA 上位机，不修改设备固件。
+- 服务默认仅监听 `127.0.0.1`，运行日志保存在 `logs/runtime/`。
 
+<div align="center">
+
+**Built for observable firmware delivery.**
+
+</div>
