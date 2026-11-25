@@ -39,6 +39,11 @@ OTA Console 遵循 `OTA-PROTO-1.0`：
 
 一个界面即可完成设备查询、固件装载、页差异比较、OTA 写入、失败定位和日志导出。升级进度只由真实 ACK 推进，不使用模拟动画掩盖链路状态。
 
+## 演示与硬件
+
+- **演示视频（YouTube）：** <https://youtu.be/B1da01hPyU0?si=EHgXTzQ1f3uk6zeB>
+- **硬件开源（立创开源广场）：** <https://oshwhub.com/qwqemm/project_teuseijg>
+
 ## 快速开始
 
 ### Windows 一键启动
